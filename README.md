@@ -70,3 +70,5 @@ See `backend/.env.example`. Never commit `.env` or real credentials.
 cd backend && python -m compileall app
 cd ../frontend && npm run build
 ```
+# CivicPilotAgent
+Autonomous GenAI Agent for Public Services and Government Procedures
