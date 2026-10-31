@@ -599,22 +599,26 @@ def evaluate_application_readiness(service_name: str, analyzed_documents: list[d
                     break
 
         is_duplicate = False
-        if identifier_fingerprint and identifier_fingerprint in seen_identifiers:
-            is_duplicate = True
-        elif not identifier_fingerprint and normalized_type in seen_types and normalized_type not in {"Academic Marksheet", "Unknown"}:
-            is_duplicate = True
+        if is_relevant:
+            if identifier_fingerprint and identifier_fingerprint in seen_identifiers:
+                is_duplicate = True
+            elif not identifier_fingerprint and normalized_type in seen_types and normalized_type not in {"Academic Marksheet", "Unknown", "Unrelated Document", "Unrecognized Document"}:
+                is_duplicate = True
 
-        if not is_duplicate:
-            if identifier_fingerprint:
-                seen_identifiers.add(identifier_fingerprint)
-            seen_types.add(normalized_type)
+            if not is_duplicate:
+                if identifier_fingerprint:
+                    seen_identifiers.add(identifier_fingerprint)
+                seen_types.add(normalized_type)
 
         # Assess document-level quality
         confidence = "High"
-        for field in analysis.get("extracted_fields", []):
-            if field.get("confidence") in {"Medium", "Low"}:
-                confidence = field.get("confidence")
-                break
+        if not is_relevant or raw_type in {"Unrecognized Document", "Unrelated Document"}:
+            confidence = "Low"
+        else:
+            for field in analysis.get("extracted_fields", []):
+                if field.get("confidence") in {"Medium", "Low"}:
+                    confidence = field.get("confidence")
+                    break
 
         has_critical_missing = len(analysis.get("missing_information", [])) > 0
         has_warnings = len(analysis.get("warnings", [])) > 0
