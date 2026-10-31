@@ -1,11 +1,23 @@
+# Environment variables
 .env
 .env.*
 !.env.example
+
+# Python
+venv/
 .venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+
+# Node
 node_modules/
 dist/
+
+# IDE and OS
+.vscode/
 .DS_Store
+Thumbs.db
+
+# Uploaded documents
 uploads/
