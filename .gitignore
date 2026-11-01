@@ -21,3 +21,6 @@ Thumbs.db
 
 # Uploaded documents
 uploads/
+
+# Nested clone directory
+CivicPilotAgent/
