@@ -11,6 +11,7 @@ import {
   Check,
   CheckCircle2,
   ChevronDown,
+  ChevronRight,
   CircleHelp,
   Clock3,
   FileCheck2,
@@ -92,6 +93,16 @@ function App() {
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [sourceSearch, setSourceSearch] = useState('')
   const [sourceCategory, setSourceCategory] = useState('All')
+  const [helpSearch, setHelpSearch] = useState('')
+  const [openFaq, setOpenFaq] = useState(0)
+
+  // Citizen Profile & Session State
+  const [citizenName, setCitizenName] = useState('Guest citizen')
+  const [citizenRole, setCitizenRole] = useState('General citizen')
+  const [showCitizenModal, setShowCitizenModal] = useState(false)
+  const [activeWorkspace, setActiveWorkspace] = useState('Citizen')
+  const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false)
+  const [showBreadcrumbMenu, setShowBreadcrumbMenu] = useState(false)
 
   // Health check on mount
   useEffect(() => {
@@ -453,6 +464,7 @@ function App() {
       items: [
         { name: 'Applications', icon: FileCheck2 },
         { name: 'Official sources', icon: Globe2 },
+        { name: 'Help & Guide', icon: CircleHelp },
       ],
     },
   ]
@@ -461,24 +473,119 @@ function App() {
     <div className="app-shell">
       <aside className={`sidebar ${mobileNav ? 'open' : ''}`}>
         <div className="brand">
-          <div className="brand-mark">
-            <ShieldCheck size={21} />
-          </div>
-          <div>
-            <b>civicpilot</b>
-            <span>PUBLIC SERVICES, SIMPLIFIED</span>
+          <div
+            style={{ display: 'flex', alignItems: 'center', gap: 11, cursor: 'pointer', flex: 1 }}
+            onClick={() => { setPage('Overview'); setMobileNav(false); }}
+            title="Go to Overview"
+          >
+            <div className="brand-mark">
+              <ShieldCheck size={21} />
+            </div>
+            <div>
+              <b>civicpilot</b>
+              <span>PUBLIC SERVICES, SIMPLIFIED</span>
+            </div>
           </div>
           <button className="mobile-close" onClick={() => setMobileNav(false)}>
             <X size={18} />
           </button>
         </div>
-        <div className="workspace-switch">
-          <div className="workspace-avatar">CP</div>
-          <div>
-            <b>Citizen workspace</b>
-            <small>Personal account</small>
+        <div className="workspace-switch-wrap">
+          <div
+            className="workspace-switch"
+            onClick={() => setShowWorkspaceMenu(!showWorkspaceMenu)}
+            title="Click to switch workspace or view options"
+          >
+            <div className="workspace-avatar">
+              {activeWorkspace === 'Student' ? 'ST' : activeWorkspace === 'Family' ? 'FM' : activeWorkspace === 'Facilitator' ? 'FC' : 'CP'}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <b style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {activeWorkspace} workspace
+              </b>
+              <small>{activeWorkspace === 'Student' ? 'NSP & Education' : activeWorkspace === 'Family' ? 'Household Certificates' : activeWorkspace === 'Facilitator' ? 'Operator Mode' : 'Personal account'}</small>
+            </div>
+            <ChevronDown
+              size={15}
+              style={{
+                transform: showWorkspaceMenu ? 'rotate(180deg)' : 'none',
+                transition: 'transform 0.2s',
+                color: '#8b96aa'
+              }}
+            />
           </div>
-          <ChevronDown size={15} />
+
+          {showWorkspaceMenu && (
+            <div className="workspace-dropdown-menu">
+              <div className="workspace-dropdown-header">
+                <b>Switch Workspace</b>
+                <small>Active: {activeWorkspace}</small>
+              </div>
+              <div className="user-dropdown-divider" />
+              {[
+                {
+                  id: 'Citizen',
+                  label: 'Citizen Workspace',
+                  sub: 'Personal identity & applications',
+                  avatar: 'CP',
+                  service: 'Passport Application',
+                },
+                {
+                  id: 'Student',
+                  label: 'Student Workspace',
+                  sub: 'Scholarships, college fees & degrees',
+                  avatar: 'ST',
+                  service: 'Scholarship Application',
+                },
+                {
+                  id: 'Family',
+                  label: 'Family & Household',
+                  sub: 'Income, caste & domicile certificates',
+                  avatar: 'FM',
+                  service: 'Income Certificate',
+                },
+                {
+                  id: 'Facilitator',
+                  label: 'Facilitator (CSC Mode)',
+                  sub: 'Multi-citizen assistance portal',
+                  avatar: 'FC',
+                  service: 'Caste Certificate',
+                },
+              ].map((ws) => (
+                <button
+                  key={ws.id}
+                  type="button"
+                  className={`workspace-menu-item ${activeWorkspace === ws.id ? 'active' : ''}`}
+                  onClick={() => {
+                    setActiveWorkspace(ws.id)
+                    setSelectedService(ws.service)
+                    notify(`Switched to ${ws.label}. Loaded ${ws.service}.`)
+                    setShowWorkspaceMenu(false)
+                    setPage('Overview')
+                  }}
+                >
+                  <div className="ws-menu-avatar">{ws.avatar}</div>
+                  <div style={{ textAlign: 'left', flex: 1 }}>
+                    <b>{ws.label}</b>
+                    <small>{ws.sub}</small>
+                  </div>
+                  {activeWorkspace === ws.id && <Check size={14} style={{ color: '#5c66df' }} />}
+                </button>
+              ))}
+              <div className="user-dropdown-divider" />
+              <button
+                type="button"
+                className="workspace-menu-action"
+                onClick={() => {
+                  setPage('Overview')
+                  setShowWorkspaceMenu(false)
+                  notify('Navigated to Workspace Overview')
+                }}
+              >
+                <LayoutDashboard size={14} /> <span>Open Workspace Overview</span>
+              </button>
+            </div>
+          )}
         </div>
         {nav.map((group) => (
           <div className="nav-group" key={group.label}>
@@ -523,46 +630,55 @@ function App() {
             </div>
             <b>Need a hand?</b>
             <p>Get help understanding a public service or application.</p>
-            <button onClick={() => setPage('AI assistant')}>
-              Ask CivicPilot <ArrowRight size={14} />
+            <button onClick={() => { setPage('Help & Guide'); setMobileNav(false); }}>
+              View Citizen Guide <ArrowRight size={14} />
             </button>
           </div>
-          <div className="profile">
-            <div className="profile-avatar">
+          <div
+            className="profile profile-clickable"
+            onClick={() => setShowCitizenModal(true)}
+            title="Click to view & edit Citizen Profile and session settings"
+          >
+            <div
+              className="profile-avatar"
+              style={{
+                background:
+                  citizenRole === 'Student'
+                    ? '#e5f6f1'
+                    : citizenRole === 'Senior Citizen'
+                    ? '#fff5e6'
+                    : citizenRole === 'Facilitator'
+                    ? '#fff0e8'
+                    : '#eef0ff',
+                color:
+                  citizenRole === 'Student'
+                    ? '#2d9972'
+                    : citizenRole === 'Senior Citizen'
+                    ? '#c97828'
+                    : citizenRole === 'Facilitator'
+                    ? '#d68c5e'
+                    : '#5c66df',
+              }}
+            >
               <UserRound size={17} />
             </div>
-            <div>
-              <b>Guest citizen</b>
-              <small>Local session</small>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <b style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {citizenName}
+              </b>
+              <small>{citizenRole} · {location || 'Local'}</small>
             </div>
-            <div className="profile-more-wrap">
-              <button
-                className="profile-more-btn"
-                onClick={() => setShowProfileMenu(!showProfileMenu)}
-                title="Session Settings & Options"
-                type="button"
-              >
-                <MoreHorizontal size={18} />
-              </button>
-              {showProfileMenu && (
-                <div className="profile-dropdown-menu">
-                  <div className="profile-dropdown-header">
-                    <b>Session Settings</b>
-                    <small>ID: local-citizen-2026</small>
-                  </div>
-                  <div className="user-dropdown-divider" />
-                  <button className="profile-menu-item" type="button" onClick={() => { notify('Switched to Facilitator Mode: assisting another citizen.'); setShowProfileMenu(false); }}>
-                    <UserRound size={13} /> <span>Facilitator Mode (Assist Others)</span>
-                  </button>
-                  <button className="profile-menu-item" type="button" onClick={() => { notify('Privacy: No credentials or documents permanently stored.'); setShowProfileMenu(false); }}>
-                    <ShieldCheck size={13} /> <span>Privacy & Data Protection</span>
-                  </button>
-                  <button className="profile-menu-item" type="button" onClick={() => { handleClearAllDocuments(); notify('Workspace reset.'); setShowProfileMenu(false); }}>
-                    <RotateCcw size={13} /> <span>Reset Workspace Documents</span>
-                  </button>
-                </div>
-              )}
-            </div>
+            <button
+              className="profile-more-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowCitizenModal(true);
+              }}
+              title="Citizen Profile & Session"
+              type="button"
+            >
+              <MoreHorizontal size={18} />
+            </button>
           </div>
         </div>
       </aside>
@@ -572,10 +688,82 @@ function App() {
           <button className="menu-btn" onClick={() => setMobileNav(true)}>
             <Menu />
           </button>
-          <div className="breadcrumb">
-            <button className="breadcrumb-btn" type="button" onClick={() => setPage('Overview')}>Workspace</button>
-            <span>/</span>
-            <button className="breadcrumb-btn active" type="button" onClick={() => setPage(page)}>{page}</button>
+          <div className="breadcrumb-nav-wrap">
+            <div className="breadcrumb">
+              <button
+                className="breadcrumb-btn breadcrumb-workspace-btn"
+                type="button"
+                onClick={() => {
+                  setPage('Overview')
+                  setShowBreadcrumbMenu(false)
+                }}
+                title="Go to Workspace Overview"
+              >
+                <Layers size={13} style={{ color: '#5c66df' }} />
+                <span>{activeWorkspace} Workspace</span>
+              </button>
+
+              <ChevronRight size={13} className="breadcrumb-arrow" />
+
+              <div className="breadcrumb-dropdown-anchor">
+                <button
+                  className={`breadcrumb-btn active breadcrumb-page-btn ${showBreadcrumbMenu ? 'open' : ''}`}
+                  type="button"
+                  onClick={() => setShowBreadcrumbMenu(!showBreadcrumbMenu)}
+                  title="Click to quickly jump to any section"
+                  aria-expanded={showBreadcrumbMenu}
+                >
+                  <span>{page}</span>
+                  <ChevronDown
+                    size={13}
+                    style={{
+                      transform: showBreadcrumbMenu ? 'rotate(180deg)' : 'none',
+                      transition: 'transform 0.18s ease',
+                      color: '#7b879e',
+                    }}
+                  />
+                </button>
+
+                {showBreadcrumbMenu && (
+                  <div className="breadcrumb-dropdown-menu">
+                    <div className="breadcrumb-dropdown-header">
+                      <b>Quick Navigation</b>
+                      <small>Jump to any section</small>
+                    </div>
+                    <div className="user-dropdown-divider" />
+                    {[
+                      { name: 'Overview', icon: LayoutDashboard, desc: 'Dashboard & starting point' },
+                      { name: 'AI assistant', icon: MessageCircle, desc: 'Conversational public service advice' },
+                      { name: 'Agent workspace', icon: Bot, desc: 'Multi-step guided application planner' },
+                      { name: 'Documents', icon: FileText, desc: 'Multi-document readiness dashboard' },
+                      { name: 'Applications', icon: FileCheck2, desc: 'Prepared application workflows' },
+                      { name: 'Official sources', icon: Globe2, desc: 'Verified Indian government portals' },
+                      { name: 'Help & Guide', icon: CircleHelp, desc: 'Citizen manual & FAQ center' },
+                    ].map((item) => (
+                      <button
+                        key={item.name}
+                        type="button"
+                        className={`breadcrumb-menu-item ${page === item.name ? 'active' : ''}`}
+                        onClick={() => {
+                          setPage(item.name)
+                          setShowBreadcrumbMenu(false)
+                          setMobileNav(false)
+                        }}
+                      >
+                        <div className="breadcrumb-menu-icon">
+                          <item.icon size={15} />
+                        </div>
+                        <div style={{ flex: 1, textAlign: 'left' }}>
+                          <b>{item.name}</b>
+                          <small>{item.desc}</small>
+                        </div>
+                        {page === item.name && <Check size={14} style={{ color: '#5c66df' }} />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
           <div className="top-actions">
             <div className={`connection ${mode}`}>
@@ -588,7 +776,15 @@ function App() {
                 ? 'API offline'
                 : 'Connecting'}
             </div>
-            <button className="icon-btn" title="Help" type="button" onClick={() => notify('CivicPilot Help: Upload documents to evaluate readiness, or ask the AI assistant.')}>
+            <button
+              className={`icon-btn ${page === 'Help & Guide' ? 'active' : ''}`}
+              title="Help & Citizen Guide"
+              type="button"
+              onClick={() => {
+                setPage('Help & Guide')
+                setMobileNav(false)
+              }}
+            >
               <CircleHelp size={18} />
             </button>
             <div className="top-avatar-wrap">
@@ -653,7 +849,11 @@ function App() {
                 <div className="hero-art">
                   <div className="orb orb-one" />
                   <div className="orb orb-two" />
-                  <div className="hero-card">
+                  <div
+                    className="hero-card hero-card-clickable"
+                    onClick={() => { setPage('Documents'); notify('Opening Document Readiness Dashboard'); }}
+                    title="Start guided document journey"
+                  >
                     <div className="hero-card-icon">
                       <Sparkles size={22} />
                     </div>
@@ -762,9 +962,20 @@ function App() {
                       <h3>Your workspace</h3>
                       <p>A quick look at your activity.</p>
                     </div>
-                    <MoreHorizontal size={18} />
+                    <button
+                      className="icon-btn"
+                      onClick={() => setShowWorkspaceMenu(!showWorkspaceMenu)}
+                      title="Workspace Switcher & Options"
+                      type="button"
+                    >
+                      <MoreHorizontal size={18} />
+                    </button>
                   </div>
-                  <div className="status-row">
+                  <div
+                    className="status-row status-row-clickable"
+                    onClick={() => setPage('Agent workspace')}
+                    title="Click to view AI Agent Workflow"
+                  >
                     <div className="status-icon">
                       <Bot size={17} />
                     </div>
@@ -777,8 +988,13 @@ function App() {
                     <span className="status-pill">
                       {workflow ? 'Prepared' : 'Ready'}
                     </span>
+                    <ArrowRight size={13} style={{ marginLeft: 6, color: '#9ba4b5' }} />
                   </div>
-                  <div className="status-row">
+                  <div
+                    className="status-row status-row-clickable"
+                    onClick={() => setPage('Documents')}
+                    title="Click to view Document Readiness Dashboard"
+                  >
                     <div className="status-icon">
                       <FileCheck2 size={17} />
                     </div>
@@ -799,6 +1015,7 @@ function App() {
                     >
                       {readiness ? `${readiness.application.readiness_percentage}% ready` : 'Empty'}
                     </span>
+                    <ArrowRight size={13} style={{ marginLeft: 6, color: '#9ba4b5' }} />
                   </div>
                   <div className="status-note">
                     <ShieldCheck size={15} />
@@ -1736,6 +1953,276 @@ function App() {
               </div>
             </div>
           )}
+                  {page === 'Help & Guide' && (
+            <div className="page-wrap">
+              <div className="page-heading">
+                <div className="eyebrow">
+                  <span className="eyebrow-dot" /> CITIZEN ASSISTANCE & SYSTEM GUIDE
+                </div>
+                <h1>Help & User Guide</h1>
+                <p>Everything you need to know about navigating public services, analyzing document readiness, and staying secure.</p>
+              </div>
+
+              {/* Safety Guarantees Bar */}
+              <div className="safety-strip">
+                <div className="safety-badge-item">
+                  <ShieldCheck size={20} className="safety-icon" />
+                  <div>
+                    <b>Grounded in Official Portals</b>
+                    <small>Information and checklists are strictly matched against verified .gov.in and .nic.in standards.</small>
+                  </div>
+                </div>
+                <div className="safety-badge-item">
+                  <ShieldCheck size={20} className="safety-icon" />
+                  <div>
+                    <b>Privacy First & UID Masking</b>
+                    <small>Sensitive numbers (Aadhaar, PAN) are masked automatically (e.g. XXXX-XXXX-1234) before processing.</small>
+                  </div>
+                </div>
+                <div className="safety-badge-item">
+                  <ShieldCheck size={20} className="safety-icon" />
+                  <div>
+                    <b>Citizen in Full Control</b>
+                    <small>CivicPilot never makes payments, handles OTPs, or submits applications without your explicit action.</small>
+                  </div>
+                </div>
+              </div>
+
+              {/* 4 Core Features Walkthrough */}
+              <section className="help-section" style={{ marginTop: 24 }}>
+                <div className="section-heading">
+                  <div>
+                    <h2>How CivicPilot Works</h2>
+                    <p>Four powerful tools to guide your public service journey from start to finish.</p>
+                  </div>
+                  <span className="muted-tag">CORE MODULES</span>
+                </div>
+                <div className="quick-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))' }}>
+                  <div className="quick-card" style={{ cursor: 'pointer' }} onClick={() => setPage('AI assistant')}>
+                    <div className="quick-icon lavender">
+                      <MessageCircle size={20} />
+                    </div>
+                    <b>1. AI Assistant</b>
+                    <p>Chat naturally about any government scheme, eligibility rules, or application step. Ask follow-up questions anytime.</p>
+                    <span>Open AI Assistant <ArrowRight size={13} /></span>
+                  </div>
+
+                  <div className="quick-card" style={{ cursor: 'pointer' }} onClick={() => setPage('Documents')}>
+                    <div className="quick-icon mint">
+                      <FileText size={20} />
+                    </div>
+                    <b>2. Document Readiness</b>
+                    <p>Upload your supporting certificates (PDF/PNG/JPG). Get instant checklist matching, missing document warnings, and readiness score.</p>
+                    <span>Inspect Documents <ArrowRight size={13} /></span>
+                  </div>
+
+                  <div className="quick-card" style={{ cursor: 'pointer' }} onClick={() => setPage('Agent workspace')}>
+                    <div className="quick-icon peach">
+                      <Bot size={20} />
+                    </div>
+                    <b>3. Agent Workspace</b>
+                    <p>Structured, multi-step workflow planner with human approval gates to organize your complete application packet.</p>
+                    <span>View Workspace <ArrowRight size={13} /></span>
+                  </div>
+
+                  <div className="quick-card" style={{ cursor: 'pointer' }} onClick={() => setPage('Official sources')}>
+                    <div className="quick-icon lavender">
+                      <Globe2 size={20} />
+                    </div>
+                    <b>4. Official Sources</b>
+                    <p>Direct directory of official Indian government portals with live retrieval from Passport Seva, DigiLocker, NSP, and more.</p>
+                    <span>Browse Portals <ArrowRight size={13} /></span>
+                  </div>
+                </div>
+              </section>
+
+              {/* FAQs Accordion */}
+              <section className="help-section" style={{ marginTop: 32 }}>
+                <div className="section-heading">
+                  <div>
+                    <h2>Frequently Asked Questions</h2>
+                    <p>Common questions about document verification, privacy, and government procedures.</p>
+                  </div>
+                  <div style={{ maxWidth: 260 }}>
+                    <input
+                      type="text"
+                      className="aside-card-input"
+                      placeholder="Search FAQs..."
+                      value={helpSearch}
+                      onChange={(e) => setHelpSearch(e.target.value)}
+                      style={{
+                        padding: '6px 12px',
+                        fontSize: 11,
+                        border: '1px solid #dcdff0',
+                        borderRadius: 8,
+                        background: '#fff',
+                        width: '100%',
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="faq-list" style={{ marginTop: 14 }}>
+                  {[
+                    {
+                      q: 'Does CivicPilot directly submit my application to the government portal?',
+                      a: 'No. CivicPilot is an AI assistant designed to prepare, verify, and organize your application workflow. Due to government safety regulations, OTP validations, CAPTCHAs, and payment authorizations must always be completed directly by you on the official portal. CivicPilot ensures you have 100% of the required documents and prerequisites ready beforehand.',
+                      tag: 'Safety & Submission',
+                    },
+                    {
+                      q: 'How does the Document Readiness Meter calculate my score?',
+                      a: 'The readiness engine matches your uploaded documents against official government document requirements. For instance, a Passport application requires 3 mandatory items: Proof of Address, Proof of Date of Birth, and Proof of Identity. When all 3 are satisfied, your readiness reaches 100%. If documents are unreadable or need human review, they are flagged accordingly.',
+                      tag: 'Readiness & Scoring',
+                    },
+                    {
+                      q: 'Is my personal and biometric data safe?',
+                      a: 'Yes. CivicPilot strictly enforces citizen privacy guardrails. Sensitive identifiers such as 12-digit Aadhaar numbers and PAN numbers are masked automatically (e.g., XXXX-XXXX-1098). Uploaded files are processed in-memory for analysis and are never logged, stored, or shared with third parties.',
+                      tag: 'Privacy & Security',
+                    },
+                    {
+                      q: 'What file formats and upload limits are supported?',
+                      a: 'CivicPilot supports standard Indian government application formats: PDF (.pdf), PNG (.png), and JPG/JPEG (.jpg, .jpeg) up to 10 MB per file. You can upload multiple files simultaneously in the Document Dashboard.',
+                      tag: 'File Support',
+                    },
+                    {
+                      q: 'What if I am missing a required document like an Income Certificate?',
+                      a: 'If CivicPilot flags a missing document, check the "Official Sources" tab. For state certificates (Income, Caste, Domicile), visit your state’s e-District or ServicePlus portal (serviceonline.gov.in) to apply for the prerequisite certificate before submitting your primary application.',
+                      tag: 'Application Guidance',
+                    },
+                    {
+                      q: 'Can I reclassify an uploaded document if AI detected it under the wrong category?',
+                      a: 'Yes! In the Document readiness dashboard, every uploaded file card has an interactive "Reclassify" dropdown. If an Aadhaar Card was initially detected as Identity Proof but you prefer to use it as Address Proof, you can change it with one click and the checklist updates instantly.',
+                      tag: 'Document Dashboard',
+                    },
+                  ]
+                    .filter((faq) => {
+                      if (!helpSearch.trim()) return true
+                      const s = helpSearch.toLowerCase()
+                      return faq.q.toLowerCase().includes(s) || faq.a.toLowerCase().includes(s) || faq.tag.toLowerCase().includes(s)
+                    })
+                    .map((faq, idx) => {
+                      const isOpen = openFaq === idx
+                      return (
+                        <div
+                          key={idx}
+                          className="faq-item-card"
+                          style={{
+                            background: '#fff',
+                            border: '1px solid #e9edf4',
+                            borderRadius: 12,
+                            padding: '16px 18px',
+                            marginBottom: 10,
+                            boxShadow: '0 2px 8px #202b4a04',
+                            transition: 'all 0.2s',
+                          }}
+                        >
+                          <div
+                            onClick={() => setOpenFaq(isOpen ? null : idx)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              cursor: 'pointer',
+                              gap: 12,
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <span
+                                style={{
+                                  fontSize: 9,
+                                  fontWeight: 700,
+                                  color: '#5c66df',
+                                  background: '#eef0ff',
+                                  padding: '2px 8px',
+                                  borderRadius: 12,
+                                }}
+                              >
+                                {faq.tag}
+                              </span>
+                              <b style={{ fontSize: 13, color: '#27324c' }}>{faq.q}</b>
+                            </div>
+                            <ChevronDown
+                              size={16}
+                              style={{
+                                color: '#8894a8',
+                                transform: isOpen ? 'rotate(180deg)' : 'none',
+                                transition: 'transform 0.2s',
+                                flexShrink: 0,
+                              }}
+                            />
+                          </div>
+                          {isOpen && (
+                            <p
+                              style={{
+                                fontSize: 11,
+                                lineHeight: 1.7,
+                                color: '#68738a',
+                                margin: '12px 0 0',
+                                paddingLeft: 4,
+                                borderTop: '1px solid #f2f4f8',
+                                paddingTop: 10,
+                              }}
+                            >
+                              {faq.a}
+                            </p>
+                          )}
+                        </div>
+                      )
+                    })}
+                </div>
+              </section>
+
+              {/* Still need help? Interactive prompt box */}
+              <div
+                className="panel"
+                style={{
+                  marginTop: 28,
+                  background: 'linear-gradient(135deg, #fbfbff, #f4f6ff)',
+                  border: '1px solid #e5e8fb',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                  <Sparkles size={20} color="#5c66df" />
+                  <h3 style={{ margin: 0, fontSize: 15 }}>Still have questions?</h3>
+                </div>
+                <p style={{ fontSize: 11, color: '#7a859c', margin: '0 0 16px' }}>
+                  Our conversational AI Assistant can clarify specific state rules, eligibility requirements, or step-by-step procedures.
+                </p>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {[
+                    'What documents are needed for fresh passport in India?',
+                    'How do I apply for an Income Certificate online?',
+                    'What is Non-ECR category for Indian passport?',
+                    'How to check NSP scholarship application status?',
+                  ].map((promptText, pIdx) => (
+                    <button
+                      key={pIdx}
+                      type="button"
+                      className="suggestion-chip"
+                      style={{
+                        background: '#ffffff',
+                        border: '1px solid #dfe3f5',
+                        borderRadius: 20,
+                        padding: '6px 14px',
+                        fontSize: 10,
+                        fontWeight: 600,
+                        color: '#4652a8',
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 5px #202b4a04',
+                      }}
+                      onClick={() => {
+                        setInput(promptText)
+                        setPage('AI assistant')
+                      }}
+                    >
+                      {promptText} →
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
 
         <footer className="footer">
@@ -1746,6 +2233,173 @@ function App() {
           <span>AI guidance · Human approval · Citizen control</span>
         </footer>
       </main>
+            {/* Citizen Profile & Persona Modal */}
+      {showCitizenModal && (
+        <div
+          className="modal-overlay"
+          onClick={() => setShowCitizenModal(false)}
+        >
+          <div
+            className="modal-dialog"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <div className="modal-title-wrap">
+                <div
+                  className="modal-avatar"
+                  style={{
+                    background:
+                      citizenRole === 'Student'
+                        ? '#e5f6f1'
+                        : citizenRole === 'Senior Citizen'
+                        ? '#fff5e6'
+                        : citizenRole === 'Facilitator'
+                        ? '#fff0e8'
+                        : '#eef0ff',
+                    color:
+                      citizenRole === 'Student'
+                        ? '#2d9972'
+                        : citizenRole === 'Senior Citizen'
+                        ? '#c97828'
+                        : citizenRole === 'Facilitator'
+                        ? '#d68c5e'
+                        : '#5c66df',
+                  }}
+                >
+                  <UserRound size={20} />
+                </div>
+                <div>
+                  <h3>{citizenName}</h3>
+                  <small>{citizenRole} · Active Citizen Session</small>
+                </div>
+              </div>
+              <button
+                className="modal-close-btn"
+                onClick={() => setShowCitizenModal(false)}
+                title="Close"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            {/* Persona Switcher */}
+            <div>
+              <label className="field-label" style={{ margin: '0 0 6px' }}>CHOOSE CITIZEN PERSONA</label>
+              <div className="persona-selector">
+                {[
+                  {
+                    role: 'General citizen',
+                    desc: 'Standard citizen application workflow',
+                    icon: '👤',
+                  },
+                  {
+                    role: 'Student',
+                    desc: 'Scholarships, admission & fee waivers',
+                    icon: '🎓',
+                  },
+                  {
+                    role: 'Senior Citizen',
+                    desc: 'Pensions, health & travel benefits',
+                    icon: '👵',
+                  },
+                  {
+                    role: 'Facilitator',
+                    desc: 'CSC / e-Seva operator assisting others',
+                    icon: '🤝',
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.role}
+                    className={`persona-card ${citizenRole === item.role ? 'active' : ''}`}
+                    onClick={() => {
+                      setCitizenRole(item.role)
+                      notify(`Persona updated to ${item.role}.`)
+                    }}
+                  >
+                    <b>{item.icon} {item.role}</b>
+                    <small>{item.desc}</small>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Profile Fields */}
+            <div className="modal-field">
+              <label>APPLICANT / CITIZEN NAME</label>
+              <input
+                type="text"
+                value={citizenName}
+                onChange={(e) => setCitizenName(e.target.value)}
+                placeholder="e.g. Guest Citizen or Aarav Sharma"
+              />
+            </div>
+
+            <div className="modal-field">
+              <label>STATE / DISTRICT JURISDICTION</label>
+              <input
+                type="text"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="e.g. Jharkhand, Ranchi or Delhi, South Delhi"
+              />
+              <small style={{ fontSize: 9, color: '#909bad', marginTop: 4, display: 'block' }}>
+                Used automatically by AI Assistant and Document Requirements to match your state rules.
+              </small>
+            </div>
+
+            {/* Session Stats Strip */}
+            <div className="modal-stats-strip">
+              <div className="modal-stat">
+                <b>{analyzedDocuments.length}</b>
+                <span>Documents</span>
+              </div>
+              <div className="modal-stat">
+                <b>{readiness ? `${readiness.application.readiness_percentage}%` : '0%'}</b>
+                <span>Readiness</span>
+              </div>
+              <div className="modal-stat">
+                <b>{selectedService.split(' ')[0]}</b>
+                <span>Service</span>
+              </div>
+            </div>
+
+            {/* Privacy Note */}
+            <div className="privacy-mini" style={{ margin: '14px 0 6px' }}>
+              <ShieldCheck size={14} />
+              <span>
+                Ephemeral local session. Documents are processed in-memory with automatic Aadhaar/PAN privacy masking.
+              </span>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="secondary-btn"
+                onClick={() => {
+                  handleClearAllDocuments()
+                  notify('Workspace documents reset.')
+                  setShowCitizenModal(false)
+                }}
+                style={{ color: '#d16268' }}
+              >
+                <Trash2 size={13} /> Reset Documents
+              </button>
+              <button
+                type="button"
+                className="primary-btn"
+                onClick={() => {
+                  notify(`Profile saved: ${citizenName} (${citizenRole}).`)
+                  setShowCitizenModal(false)
+                }}
+              >
+                Save & Continue <ArrowRight size={13} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {toast && (
         <div className="toast">
           <CheckCircle2 size={16} />

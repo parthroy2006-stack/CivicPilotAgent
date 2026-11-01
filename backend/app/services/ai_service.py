@@ -22,16 +22,16 @@ load_dotenv(BACKEND_DIR / ".env")
 APP_DIR = Path(__file__).resolve().parents[1]
 PROMPTS_DIR = APP_DIR / "prompts"
 
-SUPPORTED_MODELS = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
+SUPPORTED_MODELS = ["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-1.5-flash"]
 
 
 def get_gemini_config() -> tuple[str | None, str, str]:
     """Retrieve up-to-date Gemini API key, model name, and endpoint URL."""
     api_key = os.getenv("GEMINI_API_KEY")
-    model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash").strip()
-    # Normalize if deprecated or experimental identifier was saved
-    if "3.5" in model or "3.8" in model or not model:
-        model = "gemini-2.0-flash"
+    model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite").strip()
+
+    if not model or "2.0" in model:
+        model = "gemini-3.5-flash-lite"
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     return api_key, model, url
 
