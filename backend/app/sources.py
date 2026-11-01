@@ -7,10 +7,80 @@ import httpx
 from bs4 import BeautifulSoup
 
 ALLOWED_SUFFIXES = (".gov.in", ".nic.in", ".india.gov.in", ".gov")
+
 DEFAULT_SOURCES = [
-    {"name": "National Portal of India", "url": "https://www.india.gov.in/", "description": "Official national portal for government information and services."},
-    {"name": "National Scholarship Portal", "url": "https://scholarships.gov.in/", "description": "Official portal for scholarship information and applications; availability and scheme rules vary."},
-    {"name": "DigiLocker", "url": "https://www.digilocker.gov.in/", "description": "Official platform for accessing issued digital documents, subject to user authorization."},
+    {
+        "name": "National Portal of India",
+        "url": "https://www.india.gov.in/",
+        "category": "National Directory",
+        "description": "Official single-window access to information and services provided by all Indian Government entities.",
+    },
+    {
+        "name": "Passport Seva Portal",
+        "url": "https://www.passportindia.gov.in/",
+        "category": "Travel & Identity",
+        "description": "Consular, Passport & Visa Division (CPV), Ministry of External Affairs for passport applications and appointments.",
+    },
+    {
+        "name": "UIDAI - Unique Identification Authority of India",
+        "url": "https://uidai.gov.in/",
+        "category": "National Identity",
+        "description": "Official Aadhaar issuing authority. Verification, address update, mobile linking, and PVC card services.",
+    },
+    {
+        "name": "National Scholarship Portal (NSP)",
+        "url": "https://scholarships.gov.in/",
+        "category": "Education & Student Welfare",
+        "description": "Central and state government post-matric, pre-matric, and higher education scholarship schemes.",
+    },
+    {
+        "name": "DigiLocker",
+        "url": "https://www.digilocker.gov.in/",
+        "category": "Digital Documents",
+        "description": "Cloud platform for issuance and verification of documents and certificates in a digital way, legally at par with originals.",
+    },
+    {
+        "name": "Income Tax e-Filing & PAN Portal",
+        "url": "https://www.incometax.gov.in/",
+        "category": "Taxation & Revenue",
+        "description": "Central Board of Direct Taxes (CBDT) for instant e-PAN generation, PAN-Aadhaar linking, and returns.",
+    },
+    {
+        "name": "Parivahan Sewa (MoRTH)",
+        "url": "https://parivahan.gov.in/",
+        "category": "Transport & Licensing",
+        "description": "Ministry of Road Transport & Highways for Driving Licence, Learner Licence, and Vehicle Registration.",
+    },
+    {
+        "name": "ServicePlus / State e-District Services",
+        "url": "https://serviceonline.gov.in/",
+        "category": "Citizen Certificates",
+        "description": "Unified meta-framework by NIC for State e-District certificates (Income, Caste, Domicile, Character).",
+    },
+    {
+        "name": "e-Shram Portal",
+        "url": "https://eshram.gov.in/",
+        "category": "Social Security",
+        "description": "Ministry of Labour & Employment national database of unorganised workers for social security benefits.",
+    },
+    {
+        "name": "PM-KISAN Samman Nidhi",
+        "url": "https://pmkisan.gov.in/",
+        "category": "Agriculture & Rural",
+        "description": "Department of Agriculture and Farmers Welfare providing direct income support of ₹6,000 per year.",
+    },
+    {
+        "name": "UMANG (Unified Mobile App for New-age Governance)",
+        "url": "https://web.umang.gov.in/",
+        "category": "Unified Services",
+        "description": "Comprehensive platform accessing 1,200+ central and state government services from a single dashboard.",
+    },
+    {
+        "name": "RTI Online",
+        "url": "https://rtionline.gov.in/",
+        "category": "Public Transparency",
+        "description": "Department of Personnel and Training for filing online Right to Information requests and appeals.",
+    },
 ]
 
 
