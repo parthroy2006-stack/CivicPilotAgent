@@ -22,13 +22,13 @@ load_dotenv(BACKEND_DIR / ".env")
 APP_DIR = Path(__file__).resolve().parents[1]
 PROMPTS_DIR = APP_DIR / "prompts"
 
-SUPPORTED_MODELS = ["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-1.5-flash"]
+SUPPORTED_MODELS = ["gemini-3.5-flash-lite", "gemini-flash-lite-latest", "gemini-3.5-flash", "gemini-flash-latest"]
 
 
 def get_gemini_config() -> tuple[str | None, str, str]:
     """Retrieve up-to-date Gemini API key, model name, and endpoint URL."""
     api_key = os.getenv("GEMINI_API_KEY")
-    model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite").strip()
+    model = os.getenv("GEMINI_MODEL", "gemini-flash-latest").strip()
 
     if not model or "2.0" in model:
         model = "gemini-3.5-flash-lite"
@@ -212,13 +212,35 @@ def local_document_classifier(file_bytes: bytes, mime_type: str, filename: str =
                 {"field": "Document Type", "value": doc_type, "confidence": "High", "evidence": "Recognized document format"},
                 {"field": "Identification Record", "value": "Verified Citizen Record", "confidence": "High", "evidence": "Document scan"},
             ]
-        else:
-            is_relevant = True
-            doc_type = "Aadhaar Card"
-            summary = "Recognized official citizen identification document."
+        elif any(k in fname_lower for k in ["passport"]):
+            doc_type = "Passport"
+            summary = "Indian Passport copy. Satisfies Proof of Identity, Date of Birth, and Address."
             extracted_fields = [
-                {"field": "Document Type", "value": doc_type, "confidence": "High", "evidence": "Visual inspection"},
+                {"field": "Document Type", "value": "Passport", "confidence": "High", "evidence": "Passport booklet format"},
             ]
+        elif any(k in fname_lower for k in ["driving", "licence", "license", "dl", "rto", "parivahan"]):
+            doc_type = "Driving Licence"
+            summary = "Motor Vehicle Driving Licence. Satisfies Proof of Identity and Date of Birth."
+            extracted_fields = [
+                {"field": "Document Type", "value": "Driving Licence", "confidence": "High", "evidence": "Transport Department format"},
+            ]
+        else:
+            # Irrelevant or non-document file - strictly DO NOT treat as Aadhaar!
+            is_relevant = False
+            doc_type = "Unrelated Document"
+            summary = "This file does not appear to be a recognized government, public-service, or identity document."
+            extracted_fields = []
+            missing_info = ["Please upload a recognized official document (e.g. Aadhaar, PAN, Certificate, Bill)."]
+            return {
+                "is_relevant_document": False,
+                "document_type": "Unrelated Document",
+                "summary": summary,
+                "extracted_fields": [],
+                "missing_information": missing_info,
+                "warnings": [
+                    "Unrelated or unrecognized file. Does not satisfy public service requirements."
+                ],
+            }
 
     return {
         "is_relevant_document": is_relevant,
@@ -266,10 +288,10 @@ async def analyze_document(file_bytes: bytes, mime_type: str, filename: str = ""
         headers = {"Content-Type": "application/json"}
         params = {"key": api_key}
 
-        async with httpx.AsyncClient(timeout=45.0) as client:
+        async with httpx.AsyncClient(timeout=8.0) as client:
             for model_name in candidate_models:
                 api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
-                for attempt in range(2):
+                for attempt in range(1):
                     try:
                         response = await client.post(
                             api_url,
@@ -286,8 +308,10 @@ async def analyze_document(file_bytes: bytes, mime_type: str, filename: str = ""
                                 response_text = "".join(part.get("text", "") for part in parts if "text" in part)
                                 if response_text.strip():
                                     parsed = clean_and_parse_json(response_text)
-                                    # If Gemini confirmed a relevant document, return it
-                                    if parsed.get("is_relevant_document") and parsed.get("document_type"):
+                                    if isinstance(parsed, dict) and "is_relevant_document" in parsed:
+                                        # Normalize document_type if irrelevant
+                                        if not parsed.get("is_relevant_document"):
+                                            parsed["document_type"] = parsed.get("document_type") or "Unrelated Document"
                                         return parsed
                         elif response.status_code in (429, 503):
                             await asyncio.sleep(1.5 * (attempt + 1))

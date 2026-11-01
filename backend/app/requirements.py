@@ -515,6 +515,10 @@ def normalize_type_for_matching(raw_type: str | None) -> str:
         return "Academic Marksheet"
     if "voter" in text or "epic" in text:
         return "Voter ID / EPIC Card"
+    if "driving" in text or "licence" in text or "license" in text or "dl" in text:
+        return "Driving Licence"
+    if "passport" in text:
+        return "Passport"
     if "ration" in text:
         return "Ration Card"
     if "rent" in text or "lease" in text:
@@ -581,8 +585,17 @@ def evaluate_application_readiness(service_name: str, analyzed_documents: list[d
     seen_types: set[str] = set()
 
     for item in analyzed_documents:
-        analysis = item.get("analysis", {})
-        is_relevant = analysis.get("is_relevant_document", False)
+        # Support both raw extraction output ({ "analysis": {...} })
+        # and already-processed document objects ({ "is_relevant": True, "document_type": ... })
+        analysis = item.get("analysis")
+        if not isinstance(analysis, dict):
+            analysis = item
+
+        is_relevant = bool(
+            analysis.get("is_relevant_document")
+            if "is_relevant_document" in analysis
+            else analysis.get("is_relevant", False)
+        )
         raw_type = analysis.get("document_type") or "Unrecognized Document"
         normalized_type = normalize_type_for_matching(raw_type) if is_relevant else "Unrelated Document"
         filename = item.get("filename", "document")
@@ -602,7 +615,7 @@ def evaluate_application_readiness(service_name: str, analyzed_documents: list[d
         if is_relevant:
             if identifier_fingerprint and identifier_fingerprint in seen_identifiers:
                 is_duplicate = True
-            elif not identifier_fingerprint and normalized_type in seen_types and normalized_type not in {"Academic Marksheet", "Unknown", "Unrelated Document", "Unrecognized Document"}:
+            elif not identifier_fingerprint and normalized_type in seen_types and normalized_type not in {"Academic Marksheet", "Unknown", "Unrelated Document", "Unrecognized Document", "Unrelated / Non-Government File"}:
                 is_duplicate = True
 
             if not is_duplicate:
@@ -611,16 +624,16 @@ def evaluate_application_readiness(service_name: str, analyzed_documents: list[d
                 seen_types.add(normalized_type)
 
         # Assess document-level quality
-        confidence = "High"
-        if not is_relevant or raw_type in {"Unrecognized Document", "Unrelated Document"}:
+        confidence = analysis.get("confidence") or ("High" if is_relevant else "Low")
+        if not is_relevant or raw_type in {"Unrecognized Document", "Unrelated Document", "Unrelated / Non-Government File"}:
             confidence = "Low"
         else:
             for field in analysis.get("extracted_fields", []):
-                if field.get("confidence") in {"Medium", "Low"}:
-                    confidence = field.get("confidence")
+                if field.get("confidence") in {"Low"}:
+                    confidence = "Low"
                     break
 
-        has_critical_missing = len(analysis.get("missing_information", [])) > 0
+        has_critical_missing = False
         has_warnings = len(analysis.get("warnings", [])) > 0
 
         processed_docs.append({
@@ -673,15 +686,15 @@ def evaluate_application_readiness(service_name: str, analyzed_documents: list[d
             if primary["confidence"] == "Low":
                 status = "review_required"
                 review_reasons.append("Document text has low readability confidence.")
-            elif primary["has_critical_missing"]:
-                status = "review_required"
-                review_reasons.extend(primary["missing_information"][:2])
+                review_req_ids.add(req_id)
             else:
+                # Valid document satisfying requirement!
                 status = "satisfied"
                 satisfied_req_ids.add(req_id)
-
-            if status == "review_required":
-                review_req_ids.add(req_id)
+                if primary.get("missing_information"):
+                    review_reasons.extend(primary["missing_information"][:2])
+                elif primary.get("warnings"):
+                    review_reasons.extend(primary["warnings"][:1])
 
         checklist.append({
             "id": req_id,
@@ -734,8 +747,9 @@ def evaluate_application_readiness(service_name: str, analyzed_documents: list[d
     else:
         readiness_pct = 100
 
-    overall_status = "Ready for official portal" if (missing_mandatory == 0 and review_mandatory == 0) else \
+    overall_status = "Ready for official portal" if (missing_mandatory == 0 and review_mandatory == 0 and satisfied_mandatory > 0) else \
                      "Needs review" if (missing_mandatory == 0 and review_mandatory > 0) else \
+                     "Partially prepared" if (satisfied_mandatory > 0) else \
                      "Missing required documents"
 
     # Compile user-facing warnings and advisory
